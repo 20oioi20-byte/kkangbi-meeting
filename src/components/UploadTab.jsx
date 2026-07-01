@@ -13,12 +13,18 @@ export default function UploadTab({ onUploaded }) {
   const [progressMsg, setProgressMsg] = useState("");
   const inputRef = useRef(null);
 
+  // 저장 경로(key)는 영문/숫자만 사용 — 한글 등 특수문자는 Supabase Storage에서 오류(Invalid key) 발생
+  function safeStorageKey(ext) {
+    const random = Math.random().toString(36).slice(2, 10);
+    return `upload/${Date.now()}_${random}.${ext}`;
+  }
+
   async function submitText(text, sourceFileName) {
     setUploading(true);
     setProgressMsg("회의록 텍스트 저장 중...");
 
     try {
-      const storagePath = `upload/${Date.now()}_${sourceFileName.replace(/[^\w.\-가-힣]/g, "_")}`;
+      const storagePath = safeStorageKey("txt");
       const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
 
       const { error: upErr } = await supabase.storage
@@ -32,7 +38,7 @@ export default function UploadTab({ onUploaded }) {
         .from("mt_meetings")
         .insert({
           source: "upload",
-          source_file_name: sourceFileName,
+          source_file_name: sourceFileName, // 한글 원래 이름은 여기 화면표시용으로만 저장
           storage_path: storagePath,
           meeting_date: meetingDate,
           title: title || null,
