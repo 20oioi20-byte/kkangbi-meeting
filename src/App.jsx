@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import UploadTab from "./components/UploadTab.jsx";
 import MeetingList from "./components/MeetingList.jsx";
 import MeetingDetail from "./components/MeetingDetail.jsx";
+import SettingsModal from "./components/SettingsModal.jsx";
 
 export default function App() {
   const [tab, setTab] = useState("list"); // 'upload' | 'list'
   const [selectedId, setSelectedId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
 
   function openMeeting(id) {
     setSelectedId(id);
@@ -14,16 +16,20 @@ export default function App() {
 
   function backToList() {
     setSelectedId(null);
-    setRefreshKey((k) => k + 1); // 목록 새로고침
+    setRefreshKey((k) => k + 1);
   }
 
   return (
     <div className="app-shell">
       <div className="app-header">
         <h1>🎙️ 깡비서 회의록</h1>
-        <span style={{ fontSize: 12, color: "var(--muted)" }}>
-          대면회의 자동 STT · 요약 · 할일 관리
-        </span>
+        <button
+          className="btn secondary"
+          style={{ fontSize: 12, padding: "6px 12px" }}
+          onClick={() => setShowSettings(true)}
+        >
+          ⚙ 내 이름 설정
+        </button>
       </div>
 
       {!selectedId && (
@@ -50,6 +56,8 @@ export default function App() {
       ) : (
         <MeetingList key={refreshKey} onOpen={openMeeting} />
       )}
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
