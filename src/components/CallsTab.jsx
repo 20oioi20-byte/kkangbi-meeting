@@ -2,12 +2,16 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { getCenters, ensureCenter } from "../lib/centers.js";
 
-export default function CallsTab() {
+export default function CallsTab({ initialExpandId, expandNonce }) {
   const [calls, setCalls] = useState([]);
   const [centers, setCenters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedId, setExpandedId] = useState(initialExpandId || null);
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (initialExpandId) setExpandedId(initialExpandId);
+  }, [initialExpandId, expandNonce]);
 
   const [draft, setDraft] = useState({
     center: "", department: "", counterpart_name: "",
