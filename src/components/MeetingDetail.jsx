@@ -354,6 +354,9 @@ export default function MeetingDetail({ meetingId, onBack }) {
             {basicSaving ? "저장 중..." : basicSaved ? "저장됨 ✓" : "기본정보 저장"}
           </button>
         </div>
+        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+          업로드일: {meeting.created_at ? new Date(meeting.created_at).toLocaleString("ko-KR") : "-"}
+        </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
           <input
             type="text"
