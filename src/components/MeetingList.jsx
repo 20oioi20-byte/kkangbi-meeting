@@ -15,12 +15,16 @@ function statusClass(status) {
   return "processing";
 }
 
-export default function MeetingList({ onOpen }) {
+export default function MeetingList({ onOpen, initialCenter, centerNonce }) {
   const [meetings, setMeetings] = useState([]);
   const [centers, setCenters] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedCenter, setSelectedCenter] = useState("all");
+  const [selectedCenter, setSelectedCenter] = useState(initialCenter || "all");
+
+  useEffect(() => {
+    if (initialCenter) setSelectedCenter(initialCenter);
+  }, [initialCenter, centerNonce]);
   const [monthFilter, setMonthFilter] = useState(""); // 'YYYY-MM' or ''
   const [search, setSearch] = useState("");
   const [moveMenuId, setMoveMenuId] = useState(null);
