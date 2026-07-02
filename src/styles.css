@@ -157,3 +157,105 @@ body {
   border-radius: 8px;
   padding: 14px;
 }
+
+/* ===== v4: 셸(사이드바/하단탭), 칸반, 검색 ===== */
+.shell {
+  display: flex;
+  min-height: 100vh;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar-logo {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+}
+.sidebar-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.sidebar-item:hover:not(.active) { background: var(--bg); }
+.sidebar-footer { margin-top: auto; }
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 24px 90px;
+}
+
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  justify-content: space-around;
+  padding: 8px 0;
+  z-index: 40;
+}
+.bottom-nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 10px; color: var(--muted); background: none; border: none; cursor: pointer; padding: 4px 8px;
+}
+.bottom-nav-item.active { color: var(--accent); }
+.bottom-nav-icon { font-size: 18px; }
+
+@media (max-width: 768px) {
+  .shell { flex-direction: column; }
+  .sidebar { display: none; }
+  .bottom-nav { display: flex; }
+  .main-content { padding: 16px 16px 84px; }
+}
+
+/* 홈 대시보드 */
+.stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.stat-card .num { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.stat-card .label { font-size: 12px; color: var(--muted); }
+
+/* 칸반 */
+.kanban-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.kanban-column { flex: 0 0 220px; background: var(--bg); border-radius: 12px; padding: 12px; }
+.kanban-column-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; }
+.kanban-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px; margin-bottom: 8px; cursor: pointer; font-size: 12px;
+}
+.kanban-card:hover { border-color: var(--accent); }
+.kanban-card .meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* 검색 */
+.search-result-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 8px; cursor: pointer; background: var(--card);
+}
+.search-result-item:hover { border-color: var(--accent); }
+.search-snippet { font-size: 12px; color: var(--muted); margin-top: 4px; }
