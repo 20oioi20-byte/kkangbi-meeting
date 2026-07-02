@@ -33,6 +33,22 @@ export default function CallsTab({ initialExpandId, expandNonce }) {
 
   useEffect(() => { load(); }, []);
 
+  async function handleCallFiles(fileList) {
+    const files = Array.from(fileList || []).filter(Boolean);
+    if (files.length === 0) return;
+    const textFiles = files.filter((f) => f.type === "text/plain" || f.name.endsWith(".txt"));
+    if (textFiles.length === 0) {
+      alert("텍스트(.txt) 파일만 자동으로 내용에 반영됩니다. 클로바노트/에이닷노트 등에서 텍스트로 내보낸 뒤 업로드해주세요.");
+      return;
+    }
+    let combined = "";
+    for (const f of textFiles) {
+      const text = await f.text();
+      combined += (combined ? "\n\n" : "") + (textFiles.length > 1 ? `=== ${f.name} ===\n` : "") + text;
+    }
+    setDraft((d) => ({ ...d, content: d.content ? d.content + "\n\n" + combined : combined }));
+  }
+
   async function createCall() {
     if (!draft.content.trim()) {
       alert("통화 내용을 입력해주세요.");
@@ -118,8 +134,20 @@ export default function CallsTab({ initialExpandId, expandNonce }) {
               style={{ padding: 8, borderRadius: 8, border: "1px solid var(--border)" }}
             />
           </div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ fontSize: 12, color: "var(--muted)" }}>
+              통화 텍스트 파일 업로드 (선택, .txt, 여러 개 가능)
+            </label>
+            <input
+              type="file"
+              accept=".txt,text/plain"
+              multiple
+              onChange={(e) => handleCallFiles(e.target.files)}
+              style={{ display: "block", marginTop: 4, fontSize: 13 }}
+            />
+          </div>
           <textarea
-            placeholder="통화 내용을 입력하거나, 통화 녹음을 클로바노트로 전사한 텍스트를 붙여넣으세요."
+            placeholder="통화 내용을 입력하거나, 통화 녹음을 클로바노트/에이닷노트로 전사한 텍스트를 붙여넣으세요. (위에서 파일을 올리면 자동으로 채워집니다)"
             value={draft.content}
             onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))}
             rows={6}
@@ -148,8 +176,13 @@ export default function CallsTab({ initialExpandId, expandNonce }) {
                 <div style={{ fontWeight: 600, fontSize: 14 }}>
                   {c.counterpart_name || "상대방 미입력"}
                 </div>
+                {c.summary_bullets?.length > 0 && (
+                  <div style={{ fontSize: 12, color: "var(--text)", opacity: 0.75, marginTop: 2 }}>
+                    {c.summary_bullets[0]}
+                  </div>
+                )}
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-                  {new Date(c.call_datetime).toLocaleString("ko-KR")} · {c.center || "센터 미지정"}{c.department ? ` · ${c.department}` : ""}
+                  통화일 {new Date(c.call_datetime).toLocaleString("ko-KR")} · 등록 {new Date(c.created_at).toLocaleDateString("ko-KR")} · {c.center || "센터 미지정"}{c.department ? ` · ${c.department}` : ""}
                 </div>
               </div>
               <span className={`badge ${c.status === "done" ? "done" : c.status === "failed" ? "failed" : "processing"}`}>
