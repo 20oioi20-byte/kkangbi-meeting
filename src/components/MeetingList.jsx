@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "../lib/supabase.js";
+import { supabase, RECORDINGS_BUCKET } from "../lib/supabase.js";
 import { getCenters, ensureCenter } from "../lib/centers.js";
 
 const STATUS_LABEL = {
@@ -15,27 +15,35 @@ function statusClass(status) {
   return "processing";
 }
 
+function fmtDate(d) {
+  if (!d) return "";
+  return String(d).slice(0, 10);
+}
+
 export default function MeetingList({ onOpen, initialCenter, centerNonce }) {
   const [meetings, setMeetings] = useState([]);
   const [centers, setCenters] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedCenter, setSelectedCenter] = useState(initialCenter || "all");
+  const [monthFilter, setMonthFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [moveMenuId, setMoveMenuId] = useState(null);
+  const [newCenterName, setNewCenterName] = useState("");
+
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [merging, setMerging] = useState(false);
 
   useEffect(() => {
     if (initialCenter) setSelectedCenter(initialCenter);
   }, [initialCenter, centerNonce]);
-  const [monthFilter, setMonthFilter] = useState(""); // 'YYYY-MM' or ''
-  const [search, setSearch] = useState("");
-  const [moveMenuId, setMoveMenuId] = useState(null);
-  const [newCenterName, setNewCenterName] = useState("");
 
   async function load() {
     setLoading(true);
     const [{ data: m }, cs] = await Promise.all([
       supabase
         .from("mt_meetings")
-        .select("id, title, meeting_date, center, department, source, status, source_file_name, created_at")
+        .select("id, title, meeting_date, center, department, source, status, source_file_name, created_at, summary_bullets, raw_transcript")
         .order("meeting_date", { ascending: false })
         .limit(300),
       getCenters(),
@@ -83,6 +91,65 @@ export default function MeetingList({ onOpen, initialCenter, centerNonce }) {
     setMoveMenuId(null);
     setNewCenterName("");
     load();
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  async function mergeSelected() {
+    const targets = meetings.filter((m) => selectedIds.includes(m.id));
+    if (targets.length < 2) return;
+
+    const missingTranscript = targets.some((m) => !m.raw_transcript);
+    if (missingTranscript) {
+      alert("선택한 회의록 중 아직 처리(완료)되지 않은 항목이 있습니다. 완료된 회의록만 통합할 수 있습니다.");
+      return;
+    }
+
+    const defaultTitle = "[통합] " + targets[0].title;
+    const title = prompt("통합 회의록 제목을 입력하세요.", defaultTitle);
+    if (title === null) return;
+
+    setMerging(true);
+    try {
+      const sorted = [...targets].sort((a, b) => (a.meeting_date || "").localeCompare(b.meeting_date || ""));
+      const combined = sorted
+        .map((m) => `\n\n=== ${m.title || m.source_file_name} (${m.meeting_date}) ===\n\n${m.raw_transcript}`)
+        .join("");
+      const repDate = sorted[sorted.length - 1].meeting_date;
+
+      const storagePath = `merged/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.txt`;
+      const blob = new Blob([combined], { type: "text/plain;charset=utf-8" });
+      const { error: upErr } = await supabase.storage.from(RECORDINGS_BUCKET).upload(storagePath, blob, { contentType: "text/plain;charset=utf-8" });
+      if (upErr) throw upErr;
+
+      const { data: newMeeting, error: insErr } = await supabase
+        .from("mt_meetings")
+        .insert({
+          source: "merged",
+          source_file_name: title,
+          storage_path: storagePath,
+          meeting_date: repDate,
+          title,
+          center: targets[0].center || null,
+          department: targets[0].department || null,
+          merged_from: targets.map((m) => m.id),
+          status: "uploaded",
+        })
+        .select()
+        .single();
+      if (insErr) throw insErr;
+
+      await supabase.functions.invoke("kkangbi-meeting", { body: { meeting_id: newMeeting.id } });
+
+      setSelectedIds([]);
+      onOpen(newMeeting.id);
+    } catch (e) {
+      alert("통합 실패: " + e.message);
+    } finally {
+      setMerging(false);
+    }
   }
 
   if (loading) return <p style={{ color: "var(--muted)" }}>불러오는 중...</p>;
@@ -133,6 +200,18 @@ export default function MeetingList({ onOpen, initialCenter, centerNonce }) {
         />
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className="card" style={{ marginBottom: 12, padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--accent-soft)" }}>
+          <span style={{ fontSize: 13 }}>{selectedIds.length}개 선택됨</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn secondary" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => setSelectedIds([])}>선택 해제</button>
+            <button className="btn" style={{ padding: "4px 10px", fontSize: 12 }} onClick={mergeSelected} disabled={selectedIds.length < 2 || merging}>
+              {merging ? "통합 중..." : "통합 회의록 만들기"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {filtered.length === 0 && (
         <div className="card" style={{ textAlign: "center", color: "var(--muted)" }}>
           조건에 맞는 회의록이 없습니다.
@@ -141,11 +220,25 @@ export default function MeetingList({ onOpen, initialCenter, centerNonce }) {
 
       <div className="meeting-list">
         {filtered.map((m) => (
-          <div className="meeting-row" key={m.id} style={{ position: "relative", cursor: "default" }}>
+          <div className="meeting-row" key={m.id} style={{ position: "relative", cursor: "default", alignItems: "flex-start" }}>
+            {m.status === "done" && (
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(m.id)}
+                onChange={() => toggleSelect(m.id)}
+                style={{ marginTop: 4, marginRight: 10 }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
             <div style={{ flex: 1, cursor: "pointer" }} onClick={() => onOpen(m.id)}>
               <div style={{ fontWeight: 600 }}>{m.title || m.source_file_name || "제목 없음"}</div>
+              {m.summary_bullets?.length > 0 && (
+                <div style={{ fontSize: 12, color: "var(--text)", opacity: 0.75, marginTop: 2 }}>
+                  {m.summary_bullets[0]}
+                </div>
+              )}
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-                {m.meeting_date} · {m.center || "센터 미지정"}{m.department ? ` · ${m.department}` : ""}
+                회의일 {fmtDate(m.meeting_date)} · 업로드 {fmtDate(m.created_at)} · {m.center || "센터 미지정"}{m.department ? ` · ${m.department}` : ""}
               </div>
             </div>
             <span className={`badge ${statusClass(m.status)}`}>{STATUS_LABEL[m.status] || m.status}</span>
