@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import UploadTab from "./components/UploadTab.jsx";
 import MeetingList from "./components/MeetingList.jsx";
 import MeetingDetail from "./components/MeetingDetail.jsx";
-import SettingsModal from "./components/SettingsModal.jsx";
 import CallsTab from "./components/CallsTab.jsx";
 import ChatTab from "./components/ChatTab.jsx";
 import HomeTab from "./components/HomeTab.jsx";
 import KanbanBoard from "./components/KanbanBoard.jsx";
 import SearchTab from "./components/SearchTab.jsx";
+import SettingsTab from "./components/SettingsTab.jsx";
 
 const NAV_ITEMS = [
   { key: "home", label: "홈", icon: "🏠" },
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { key: "calls", label: "통화기록", icon: "☎️" },
   { key: "chat", label: "AI 채팅", icon: "💬" },
   { key: "search", label: "검색", icon: "🔍" },
+  { key: "settings", label: "설정", icon: "⚙" },
 ];
 
 export default function App() {
@@ -23,7 +24,6 @@ export default function App() {
 
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
 
   const [presetCenter, setPresetCenter] = useState(null);
   const [centerNonce, setCenterNonce] = useState(0);
@@ -82,6 +82,7 @@ export default function App() {
 
     if (mainTab === "chat") return <ChatTab />;
     if (mainTab === "search") return <SearchTab onOpenMeeting={openMeeting} onOpenCall={openCall} />;
+    if (mainTab === "settings") return <SettingsTab />;
 
     return null;
   }
@@ -103,12 +104,6 @@ export default function App() {
             <span>{item.label}</span>
           </button>
         ))}
-        <div className="sidebar-footer">
-          <button className="sidebar-item" onClick={() => setShowSettings(true)}>
-            <span>⚙</span>
-            <span>내 이름 설정</span>
-          </button>
-        </div>
       </aside>
 
       <main className="main-content">
@@ -130,8 +125,6 @@ export default function App() {
           </button>
         ))}
       </nav>
-
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
