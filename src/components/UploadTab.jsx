@@ -67,10 +67,32 @@ export default function UploadTab({ onUploaded }) {
     }
   }
 
-  async function handleFile(file) {
-    if (!file) return;
-    const text = await file.text();
-    submitText(text, file.name);
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || []).filter(Boolean);
+    if (files.length === 0) return;
+
+    if (files.length === 1) {
+      const text = await files[0].text();
+      submitText(text, files[0].name);
+      return;
+    }
+
+    // 여러 파일 선택 시: 같은 회의가 여러 세션으로 나뉜 경우로 보고 하나로 병합
+    setUploading(true);
+    setProgressMsg(`${files.length}개 파일을 하나로 합치는 중...`);
+    try {
+      const parts = [];
+      for (const f of files) {
+        const text = await f.text();
+        parts.push(`\n\n=== ${f.name} ===\n\n${text}`);
+      }
+      const combined = parts.join("");
+      const combinedName = `${files[0].name} 외 ${files.length - 1}건`;
+      await submitText(combined, combinedName);
+    } catch (e) {
+      setProgressMsg("파일 병합 실패: " + e.message);
+      setUploading(false);
+    }
   }
 
   return (
@@ -78,6 +100,8 @@ export default function UploadTab({ onUploaded }) {
       <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6 }}>
         클로바노트 앱에서 회의 녹음 → 자동 STT·화자분리 완료 후,
         <b> [내보내기 → txt]</b>로 다운받은 파일을 올리거나 텍스트를 그대로 붙여넣으세요.
+        <br />
+        같은 회의가 여러 세션(파일)으로 나뉘어 있다면 <b>여러 파일을 한번에 선택</b>하면 하나로 합쳐서 분석합니다.
       </div>
 
       <div className="section-title">회의 날짜</div>
@@ -123,7 +147,7 @@ export default function UploadTab({ onUploaded }) {
           onDrop={(e) => {
             e.preventDefault();
             setDragOver(false);
-            handleFile(e.dataTransfer.files?.[0]);
+            handleFiles(e.dataTransfer.files);
           }}
           onClick={() => inputRef.current?.click()}
         >
@@ -131,15 +155,16 @@ export default function UploadTab({ onUploaded }) {
             <p>{progressMsg}</p>
           ) : (
             <p style={{ margin: 0, fontSize: 15 }}>
-              클로바노트에서 내보낸 .txt 파일을 드래그하거나 클릭해서 선택
+              클로바노트에서 내보낸 .txt 파일을 드래그하거나 클릭해서 선택 (여러 개 선택 가능)
             </p>
           )}
           <input
             ref={inputRef}
             type="file"
             accept=".txt,text/plain"
+            multiple
             style={{ display: "none" }}
-            onChange={(e) => handleFile(e.target.files?.[0])}
+            onChange={(e) => handleFiles(e.target.files)}
           />
         </div>
       ) : (
