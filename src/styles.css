@@ -259,3 +259,10 @@ body {
 }
 .search-result-item:hover { border-color: var(--accent); }
 .search-snippet { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* 모바일 업로드 UX 개선 */
+@media (max-width: 768px) {
+  .dropzone { padding: 32px 16px; }
+  .tabs .tab-btn { flex: 1; text-align: center; }
+  .upload-actions .btn { width: 100%; }
+}
